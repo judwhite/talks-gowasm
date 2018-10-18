@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+    <title>TypeScript wasm</title>
+</head>
+
+<body>
+	<script>
+	(async () => {
+	    const fetchPromise = fetch('build/optimized.wasm');
+	    const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, {});
+	    console.log(instance.exports.add(40, 2));
+	})();
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,279 @@
+WebAssembly and Go
+17 Oct 2018
+
+Jud White
+@judson_white
+https://github.com/judwhite
+
+* Slides Available
+
+- [[https://github.com/judwhite/talks-gowasm]]
+
+.image assembly_time_luzhajka.jpg 450 _
+
+.caption _Gopher_ by [[https://www.instagram.com/reneefrench/][Renée French]], image credit [[https://vk.com/olga_luzhajka][@luzhajka]]
+
+* About me
+
+* Work
+
+- Jud White
+- Team lead/architect at Dell
+- C/C++ background
+- Know some x86 ASM
+- Go since 2014
+
+* Play
+
+.video skydiveclips.mp4 video/mp4 520 _
+
+.caption _more_fun_videos_on_IG_ [[https://instagram.com/jud.white][@jud.white]]
+
+* WebAssembly
+
+* WebAssembly
+
+- What is it, why do I care?
+- Go and WASM
+- C/C++, Rust, TypeScript
+- Tools
+- Future
+
+: WASM - What is it, use cases, browser support, why is it so fast
+: Go and WASM + the JS glue, how to interact with the DOM, how can two WASM modules talk?
+: Tooling - ..., TODO, ..., asm.js fallback
+
+* WebAssembly: What is it?
+
+- W3C Web Standard: We are in MVP days!
+- Runs in modern web browsers and Node: [[https://caniuse.com/#feat=wasm]]
+- Plays well with JavaScript
+- Compilation target for C/C++, Rust, TypeScript, Go, etc.
+
+: Older browsers: Can ship down "asm.js" version for older browsers, can compile WASM -> JS :(
+: MVP: perf improvements in browsers, more features (such as direct access to the DOM). Roll your own GC; future leverage browser GC.
+: already reasonably fast and usable
+
+* WebAssembly: Fast
+
+- Assembly-like, binary format
+- Near-native performance
+
+Performance comparison using [[https://ai.danruta.co.uk/webassembly]] (MNIST training):
+
+  |            | Chrome 69.0.3497.100 | Firefox 62.0 | Edge 42.17134.1.0
+  |------------|----------------------|--------------|------------------
+  | JavaScript |               1m 37s |       1m 21s |            2m 23s
+  | WASM       |                7.11s |        6.56s |             6.18s
+  |------------|----------------------|--------------|------------------
+  |            |           14x faster |   30x faster |        23x faster
+
+_10-30x_faster_execution_
+
+: byte for byte, JS is expensive. 150kb image vs 150kb js
+: Parsing (faster in WASM)
+: Compile and optimize (faster in WASM)
+: Re-optimizing (gone in WASM)
+: Execute (faster in WASM)
+
+* WebAssembly: Portability and Security
+
+- Sandboxed, memory-safe
+- Platform and Architecture independent
+- Designed for the web, with non-web environments in mind
+
+: such as nodejs, feature testing + dynamic linking
+: so, not really 'web'
+
+* WebAssembly: WAT (WebAssembly Text Format)
+
+- Compilable
+- Stack Machine
+
+  (module
+    (func $add (param $lhs i32) (param $rhs i32) (result i32)
+      get_local $lhs
+      get_local $rhs
+      i32.add)
+    (export "add" (func $add))
+  )
+
+: stack ops, push, push, add op
+: No, not [[https://www.destroyallsoftware.com/talks/wat][Gary Bernhardt's "Wat"]]
+: so, not really assembly (b/c stack machine)
+: webassembly is neither really web nor assembly... but it's both.
+
+* WebAssembly: Why isn't JavaScript dead already?
+
+- Mindshare
+- Existing ecosystem
+- Existing systems
+
+WebAssembly is going to democratize the frontend.
+
+: JavaScript's monopoly over the browser is over.
+: WASM gives you a choice. people may prefer TypeScript to compile to WASM.
+
+* Go and WebAssembly
+
+* Go and WebAssembly
+
+- Go 1.11!
+- [[https://golang.org/pkg/syscall/js/]]
+- [[https://github.com/golang/go/wiki/WebAssembly]]
+
+  GOOS=js GARCH=wasm
+
+  *_wasm.go / *_js.go
+
+* Go and WebAssembly: Starter Files
+
+Linux:
+
+  cp $GOROOT/misc/wasm/wasm_exec.html .
+  cp $GOROOT/misc/wasm/wasm_exec.js .
+
+Windows:
+
+  copy %GOROOT%\misc\wasm\wasm_exec.html .
+  copy %GOROOT%\misc\wasm\wasm_exec.js .
+
+* Go and WebAssembly: wasm_exec.html (stripped down)
+
+  <body>
+    <main id="app"></main>
+  
+    <script src="wasm_exec.js"></script>
+    <script>
+      const go = new Go();
+  
+      (async () => {
+        const fetchPromise = fetch('YOUR_OUTPUT.wasm');
+        const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, go.importObject);
+        await go.run(instance);
+      })();
+    </script>
+  </body>
+
+* Go and WebAssembly: Test Web Server (optional)
+
+  go get -u github.com/shurcooL/goexec
+
+Linux:
+
+  goexec 'http.ListenAndServe("127.0.0.1:8080", http.FileServer(http.Dir(".")))'
+  
+Windows:
+
+  goexec "http.ListenAndServe(\"127.0.0.1:8080\", http.FileServer(http.Dir(\".\")))"
+
+: Presenter notes:
+: Dmitri Shuralyov [12:26 AM]
+: like Lamborghini, except very different (shur-AHL-yov)
+: useful if you're just playing around, probably you have your own webserver
+
+* WebAssembly Demos
+
+- [[https://stdiopt.github.io/gowasm-experiments/splashy]]
+- [[https://rawgit.com/AssemblyScript/assemblyscript/master/examples/game-of-life/index.html]]
+- [[https://beta.unity3d.com/jonas/AngryBots/]]
+
+* Go and WebAssembly: Handle Button Click
+
+* Go and WebAssembly: Button and Console Output (JavaScript)
+
+.code -numbers ./wasm_1/wasm_exec.html 24,/END OMIT/
+
+* Go and WebAssembly: Button and Console Output (Go)
+
+.code -numbers ./wasm_1/main_wasm.go 3,
+
+* Go and WebAssembly: Single Page Application (SPA) and working with the DOM
+
+* Go and WebAssembly: SPA's HTML and JavaScript
+
+.code -numbers ./wasm_2/wasm_exec.html 17,/END OMIT/
+
+* Go and WebAssembly: DOM Abstraction (Go)
+
+.code -numbers ./wasm_2/wasm/dom.go 1,22
+
+* Go and WebAssembly: Working with the DOM (Go)
+
+.code -numbers ./wasm_2/main_wasm.go 15,27
+
+* Go and WebAssembly: Click Callback / History (Go)
+
+.code -numbers ./wasm_2/main_wasm.go 29,52
+
+* Go and WebAssembly: Initialization (Go)
+
+.code -numbers ./wasm_2/main_wasm.go 54,63
+
+* Go and WebAssembly: WASM Unload (Go)
+
+.code -numbers ./wasm_2/wasm/wasm.go
+
+* Go and WebAssembly: Wait for Unload (Go)
+
+.code -numbers ./wasm_2/main_wasm.go 54,67
+
+* TypeScript
+
+  npm install --save-dev AssemblyScript/assemblyscript
+  asinit .
+  npm run asbuild
+
+TypeScript
+
+.code ts/assembly/index.ts 3,
+
+HTML/JS
+
+.code ts/index.html 9,17
+
+* Other Languages
+
+- [[https://webassembly.studio/][WebAssembly Studio]]
+- C/C++: Emscripten [[http://kripken.github.io/emscripten-site/docs/getting_started/Tutorial.html]]
+- TypeScript: [[https://next.assemblyscript.org]], [[https://github.com/AssemblyScript/assemblyscript/wiki/Quick-start]]
+- Rust: [[https://kripken.github.io/blog/binaryen/2018/04/18/rust-emscripten.html]]
+- C#: [[https://github.com/aspnet/Blazor/wiki/FAQ]]
+- Haskell: [[https://github.com/tweag/asterius]]
+
+: Browser + Razor = Blazor :rolleyes:, aims to be a UI toolkit
+
+* WebAssembly Tools
+
+* Binaryen
+
+- [[https://github.com/WebAssembly/binaryen]]
+- Compiler/optimizer
+- Powers AssemblyScript (TypeScript compiler) and others
+
+- [[https://github.com/thlorenz/wasm2js]]
+- [[https://github.com/mafintosh/wat2js]]
+
+* WebAssembly Binary Toolkit (WABT)
+
+- [[https://github.com/WebAssembly/wabt]]
+- wat2wasm, wasm2wat
+- wasm2c
+
+: "wabbit"
+
+* Future of WebAssembly
+
+- GC
+- Threads
+- WASM-native DOM APIs
+- Debugging tools
+- Keep getting faster
+- Spec proposals: [[https://github.com/WebAssembly/gc/blob/master/proposals/gc/Overview.md]]
+
+* WebAssembly Resources
+
+- [[https://developer.mozilla.org/en-US/docs/WebAssembly]]
+- [[https://webassembly.org/]]
+- [[https://www.google.com/search?q=Lin+Clark+WebAssembly][Lin Clark (Mozilla)]]
+- [[https://www.google.com/search?q=Luke+Wagner+WebAssembly][Luke Wagner (Mozilla)]]
